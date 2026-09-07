@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Enterprise PM Command Center (Jira + OKR Advanced)</title>
+  <title>Enterprise PM Command Center (Jira + OKR + SAMR Pipeline)</title>
   <style>
     :root {
       --jira-blue: #0052cc;
@@ -12,6 +12,7 @@
       --jira-border: #dfe1e6;
       --jira-hover: #ebecf0;
       --jira-green: #36b37e;
+      --jira-purple: #6554c0;
       --jira-text-muted: #6b778c;
       --cell-w: 95px;
     }
@@ -20,20 +21,21 @@
     body { background-color: #fff; color: var(--jira-dark); display: flex; height: 100vh; overflow: hidden; }
 
     /* Left Sidebar */
-    .sidebar { width: 250px; background: #0747a6; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+    .sidebar { width: 260px; background: #0747a6; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
     .brand { padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: space-between; }
     .brand h2 { font-size: 15px; font-weight: 700; }
-    .nav-group { padding: 12px 8px; flex: 1; }
+    .nav-group { padding: 12px 8px; flex: 1; overflow-y: auto; }
     .nav-label { font-size: 11px; text-transform: uppercase; color: #8eb8f5; font-weight: 700; margin: 10px 0 6px 8px; }
     .nav-item { padding: 9px 12px; border-radius: 5px; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
     .nav-item:hover { background: rgba(255,255,255,0.12); }
     .nav-item.active { background: rgba(255,255,255,0.22); font-weight: 600; }
     .nav-badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; background: rgba(255,255,255,0.2); }
+    .nav-badge-samr { background: #ffab00; color: #172b4d; font-weight: 700; }
 
     /* Main Container */
     .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
 
-    /* 常駐頂部：OKR 目標提醒列 (可編輯) */
+    /* 常駐頂部：OKR 目標提醒列 */
     .pinned-okr-bar {
       background: #091e42;
       color: #fff;
@@ -50,21 +52,12 @@
     .okr-inputs-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .okr-box { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 6px 10px; }
     .okr-box-title { font-size: 11px; color: #4c9aff; font-weight: 700; margin-bottom: 4px; display: flex; justify-content: space-between; }
-    .okr-editable {
-      width: 100%;
-      background: transparent;
-      border: 1px solid transparent;
-      color: #fff;
-      font-size: 12px;
-      outline: none;
-      border-radius: 2px;
-    }
+    .okr-editable { width: 100%; background: transparent; border: 1px solid transparent; color: #fff; font-size: 12px; outline: none; border-radius: 2px; }
     .okr-editable:focus { background: rgba(255,255,255,0.15); border-color: #4c9aff; }
 
     /* Top Bar */
     .top-bar { height: 50px; border-bottom: 1px solid var(--jira-border); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; background: #fff; flex-shrink: 0; }
     .top-left h1 { font-size: 16px; font-weight: 700; }
-    .top-right { display: flex; align-items: center; gap: 10px; }
     .btn { background: var(--jira-blue); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; }
     .btn:hover { background: #0065ff; }
 
@@ -91,7 +84,7 @@
     .panel-view { display: none; padding: 18px; height: 100%; flex-direction: column; }
     .panel-view.active { display: flex; }
 
-    /* Tabs Component inside Panels */
+    /* Tabs */
     .panel-tabs { display: flex; gap: 6px; border-bottom: 2px solid var(--jira-border); margin-bottom: 14px; }
     .tab-btn { padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--jira-text-muted); cursor: pointer; border: none; background: transparent; border-bottom: 2px solid transparent; margin-bottom: -2px; }
     .tab-btn.active { color: var(--jira-blue); border-bottom-color: var(--jira-blue); }
@@ -104,17 +97,35 @@
     th { background: #fafbfc; border-bottom: 2px solid var(--jira-border); padding: 10px 12px; color: var(--jira-text-muted); font-size: 11px; text-transform: uppercase; font-weight: 700; }
     td { padding: 8px 12px; border-bottom: 1px solid #ebecf0; vertical-align: middle; }
     tr:hover { background: #fafbfc; }
-    td input, td select { width: 100%; padding: 5px 6px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; background: transparent; }
-    td input:focus, td select:focus { background: #fff; border-color: #4c9aff; outline: none; }
+    td input, td select, td textarea { width: 100%; padding: 5px 6px; border: 1px solid transparent; border-radius: 4px; font-size: 12px; background: transparent; }
+    td textarea { resize: vertical; min-height: 40px; font-family: inherit; }
+    td input:focus, td select:focus, td textarea:focus { background: #fff; border-color: #4c9aff; outline: none; }
 
     /* Gantt Workspace */
     .gantt-root { display: flex; flex: 1; border: 1px solid var(--jira-border); border-radius: 5px; background: #fff; overflow: hidden; }
-    .gantt-tree { width: 440px; border-right: 2px solid var(--jira-border); background: #fafbfc; flex-shrink: 0; display: flex; flex-direction: column; }
+    .gantt-tree { width: 490px; border-right: 2px solid var(--jira-border); background: #fafbfc; flex-shrink: 0; display: flex; flex-direction: column; }
     .gantt-tree-header { height: 40px; border-bottom: 1px solid var(--jira-border); padding: 0 12px; display: flex; align-items: center; font-size: 11px; font-weight: 700; color: var(--jira-text-muted); }
     .gantt-tree-body { flex: 1; overflow-y: hidden; }
-    .tree-row { height: 42px; border-bottom: 1px solid #ebecf0; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+    .tree-row { height: 44px; border-bottom: 1px solid #ebecf0; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
     .tree-row:hover { background: var(--jira-hover); }
-    .tree-info { display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-info { display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+
+    /* SAMR Pipeline 註釋膠囊 */
+    .samr-annotation {
+      display: inline-flex;
+      align-items: center;
+      background: #fff0b3;
+      color: #7a4b04;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      cursor: help;
+      border: 1px solid #ffe380;
+      margin-left: 6px;
+      flex-shrink: 0;
+    }
+    .samr-annotation:hover { background: #ffc400; }
 
     .color-dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.2); }
     .palette-popover { position: absolute; background: #fff; border: 1px solid var(--jira-border); border-radius: 6px; padding: 6px; display: none; grid-template-columns: repeat(4, 1fr); gap: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 200; }
@@ -123,13 +134,13 @@
     .timeline-hdr { height: 40px; border-bottom: 1px solid var(--jira-border); display: flex; background: #fafbfc; }
     .week-col { width: var(--cell-w); min-width: var(--cell-w); border-right: 1px dashed var(--jira-border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--jira-text-muted); }
     .timeline-bdy { position: relative; flex: 1; }
-    .timeline-row { height: 42px; border-bottom: 1px solid #ebecf0; position: relative; display: flex; }
+    .timeline-row { height: 44px; border-bottom: 1px solid #ebecf0; position: relative; display: flex; }
     .cell-grid { width: var(--cell-w); min-width: var(--cell-w); border-right: 1px dashed #f4f5f7; height: 100%; }
 
     .gantt-bar {
       position: absolute;
       top: 9px;
-      height: 24px;
+      height: 26px;
       border-radius: 4px;
       color: #fff;
       font-size: 11px;
@@ -154,7 +165,7 @@
       <span style="font-size: 10px; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">2026 Q3</span>
     </div>
     <div class="nav-group">
-      <div class="nav-label">核心工作台</div>
+      <div class="nav-label">核心指揮面板</div>
       <div class="nav-item active" onclick="switchNav('roadmap')">
         <span>📊 專案時程總覽 (甘特圖)</span>
       </div>
@@ -166,35 +177,40 @@
         <span>💰 35% 商務利潤把關</span>
         <span class="nav-badge">35%</span>
       </div>
+      <div class="nav-label">跨部門協作決策</div>
+      <div class="nav-item" onclick="switchNav('samr')">
+        <span>🗣️ 跨部門開會 SAMR</span>
+        <span class="nav-badge nav-badge-samr">決策連動</span>
+      </div>
     </div>
   </aside>
 
   <!-- Main View Area -->
   <div class="main">
     
-    <!-- 1. 頂部常駐可編輯 OKR 看板 (切換所有面板均常駐置頂) -->
+    <!-- 1. 頂部常駐可編輯 OKR 看板 -->
     <div class="pinned-okr-bar">
       <div class="okr-header-row">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="okr-tag">團隊 OKR 目標對齊</span>
-          <span style="font-size: 12px; color: #b3d4ff;">全專案雙核驅動核心基準（點擊文字直接編輯）</span>
+          <span class="okr-tag">團隊 OKR 目標常駐</span>
+          <span style="font-size: 12px; color: #b3d4ff;">全專案落地與利潤雙驅動目標（可直接點擊修改）</span>
         </div>
         <span style="font-size: 11px; color: #8eb8f5;">全域實時鎖定</span>
       </div>
       <div class="okr-inputs-row">
         <div class="okr-box">
           <div class="okr-box-title">
-            <span>🎯 65% 落地品質目標 (Objective 1)</span>
-            <span id="okr-ops-metric">目標客戶評分: 95分</span>
+            <span>🎯 65% 專案落地品質 (Objective 1)</span>
+            <span>滿意度 ≥ 95 分</span>
           </div>
-          <input class="okr-editable" type="text" value="O1: 零延誤打造頂級品牌體驗；KR: 展場硬體 100% 簽核驗收、客戶滿意度 ≥ 95 分">
+          <input class="okr-editable" type="text" value="O1: 零時差落地品牌大型活動；KR: 硬體驗收 100% 簽核、滿意度 95+">
         </div>
         <div class="okr-box">
           <div class="okr-box-title">
-            <span>💰 35% 商務風控目標 (Objective 2)</span>
-            <span id="okr-biz-metric">毛利底線: 32%</span>
+            <span>💰 35% 商務風控與利潤 (Objective 2)</span>
+            <span>毛利底線: 32%</span>
           </div>
-          <input class="okr-editable" type="text" value="O2: 嚴密把關合約與成本利潤；KR: 專案毛利率 ≥ 32%、請款核銷準時率 ≥ 90%">
+          <input class="okr-editable" type="text" value="O2: 嚴密把關合約與採購利潤；KR: 專案毛利率 ≥ 32%、請款核銷準時率 ≥ 90%">
         </div>
       </div>
     </div>
@@ -205,11 +221,11 @@
         <h1 id="pageTitle">專案時程總覽 (Roadmap 甘特圖)</h1>
       </div>
       <div class="top-right">
-        <button class="btn" onclick="openAddTaskModal()">＋ 新增任務</button>
+        <button class="btn" onclick="openAddTaskModal()">＋ 新增項目</button>
       </div>
     </header>
 
-    <!-- PIP (Progress In Percentage) 浮動視窗 -->
+    <!-- PIP 懸浮膠囊 -->
     <div class="pip-floater" id="pipContainer">
       <div class="pip-ring" id="pipValue">0%</div>
       <div>
@@ -218,14 +234,14 @@
       </div>
     </div>
 
-    <!-- Content Panels Viewport -->
+    <!-- Content Viewports -->
     <div class="content-viewport">
       
-      <!-- Panel 1: Roadmap (Gantt Chart) -->
+      <!-- Panel 1: Roadmap (Gantt Chart with SAMR Annotation) -->
       <div id="view-roadmap" class="panel-view active">
         <div class="gantt-root">
           <div class="gantt-tree">
-            <div class="gantt-tree-header">任務名稱 / 主責 / 次責 (雙擊改名 / 點圓點換色)</div>
+            <div class="gantt-tree-header">任務模組 / 標題 Pipeline (含動態開會註釋)</div>
             <div class="gantt-tree-body" id="treeRows"></div>
           </div>
           <div class="gantt-timeline">
@@ -235,14 +251,12 @@
         </div>
       </div>
 
-      <!-- Panel 2: 65% Operations View (with Sub Tabs) -->
+      <!-- Panel 2: 65% Operations View -->
       <div id="view-ops" class="panel-view">
         <div class="panel-tabs">
           <button class="tab-btn active" onclick="switchSubTab('ops', 'schedule')">📋 現場落地執行清單</button>
           <button class="tab-btn" onclick="switchSubTab('ops', 'okr')">🎯 對齊 65% 專案落地 OKR</button>
         </div>
-
-        <!-- SubTab: Ops Schedule -->
         <div id="ops-sub-schedule" class="tab-content active">
           <div class="table-card">
             <table>
@@ -261,20 +275,17 @@
             </table>
           </div>
         </div>
-
-        <!-- SubTab: Align 65% OKR -->
         <div id="ops-sub-okr" class="tab-content">
           <div class="table-card" style="padding: 16px;">
             <h3 style="color: #0052cc; margin-bottom: 10px;">🎯 對齊 65% 專案落地與客戶關係 OKR 指標矩陣</h3>
             <table>
               <thead>
                 <tr>
-                  <th>對齊 OKR 關鍵成果 (Key Results)</th>
+                  <th>對齊 OKR 關鍵成果</th>
                   <th>權重</th>
                   <th>主責單位</th>
                   <th>次責單位</th>
                   <th>當前量化指標達成度</th>
-                  <th>狀態對齊</th>
                 </tr>
               </thead>
               <tbody>
@@ -283,24 +294,14 @@
                   <td>35%</td>
                   <td>活動統包組</td>
                   <td>現場督導 PM</td>
-                  <td><input type="text" value="零事故達成中 (已完備 2 套備案)"></td>
-                  <td><span style="color:#006644; font-weight:700;">🟢 達標</span></td>
+                  <td><input type="text" value="已完備 2 套緊急電力備援系統"></td>
                 </tr>
                 <tr>
                   <td><strong>KR 1.2:</strong> 客戶滿意度問卷評分達 95 分以上</td>
                   <td>35%</td>
                   <td>客戶關係組</td>
-                  <td>策略策劃組</td>
-                  <td><input type="text" value="中間評核得分: 96.5 分"></td>
-                  <td><span style="color:#006644; font-weight:700;">🟢 達標</span></td>
-                </tr>
-                <tr>
-                  <td><strong>KR 1.3:</strong> 影音、KV 與硬體驗收簽核率 100%</td>
-                  <td>30%</td>
-                  <td>視覺設計組</td>
-                  <td>影音製作團隊</td>
-                  <td><input type="text" value="簽核完成率 88%"></td>
-                  <td><span style="color:#ff8b00; font-weight:700;">🟡 進行中</span></td>
+                  <td>策劃提案組</td>
+                  <td><input type="text" value="中間評估 96 分"></td>
                 </tr>
               </tbody>
             </table>
@@ -308,14 +309,12 @@
         </div>
       </div>
 
-      <!-- Panel 3: 35% Business & Profit View (with Sub Tabs) -->
+      <!-- Panel 3: 35% Business View -->
       <div id="view-biz" class="panel-view">
         <div class="panel-tabs">
           <button class="tab-btn active" onclick="switchSubTab('biz', 'budget')">💰 預算與採購利潤表</button>
           <button class="tab-btn" onclick="switchSubTab('biz', 'okr')">📑 對齊 35% 商務風控 OKR</button>
         </div>
-
-        <!-- SubTab: Budget -->
         <div id="biz-sub-budget" class="tab-content active">
           <div class="table-card">
             <table>
@@ -335,20 +334,17 @@
             </table>
           </div>
         </div>
-
-        <!-- SubTab: Align 35% OKR -->
         <div id="biz-sub-okr" class="tab-content">
           <div class="table-card" style="padding: 16px;">
             <h3 style="color: #6554c0; margin-bottom: 10px;">💰 對齊 35% 商務利潤與合約流程 OKR 指標矩陣</h3>
             <table>
               <thead>
                 <tr>
-                  <th>對齊 OKR 關鍵成果 (Key Results)</th>
+                  <th>對齊 OKR 關鍵成果</th>
                   <th>權重</th>
                   <th>主責單位</th>
                   <th>次責單位</th>
                   <th>指標數值審查</th>
-                  <th>風險評級</th>
                 </tr>
               </thead>
               <tbody>
@@ -358,27 +354,43 @@
                   <td>商務風控 PM</td>
                   <td>採購發包組</td>
                   <td><input type="text" value="當前核算毛利率: 35.8%"></td>
-                  <td><span style="color:#006644; font-weight:700;">安全</span></td>
                 </tr>
                 <tr>
-                  <td><strong>KR 2.2:</strong> 公部門及指標客戶合約條款 100% 審查無違約隱患</td>
+                  <td><strong>KR 2.2:</strong> 合約條款 100% 審查無違約隱患</td>
                   <td>30%</td>
                   <td>法務合約組</td>
                   <td>專案經理</td>
-                  <td><input type="text" value="已完成雙向法務對審簽署"></td>
-                  <td><span style="color:#006644; font-weight:700;">安全</span></td>
-                </tr>
-                <tr>
-                  <td><strong>KR 2.3:</strong> 各階段 Milestone 請款核銷準時回款率 ≥ 90%</td>
-                  <td>30%</td>
-                  <td>財務行政組</td>
-                  <td>專案經理</td>
-                  <td><input type="text" value="第一期款已全額入帳"></td>
-                  <td><span style="color:#006644; font-weight:700;">達標</span></td>
+                  <td><input type="text" value="合約條款雙向確認完畢"></td>
                 </tr>
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <!-- Panel 4: 跨部門開會 SAMR (Summary - Action - Measurable Result) 面板 -->
+      <div id="view-samr" class="panel-view">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+          <div>
+            <h3 style="font-size:15px; font-weight:700;">🗣️ 跨部門溝通決策台 (SAMR 框架)</h3>
+            <p style="font-size:12px; color:var(--jira-text-muted);">編輯開會結果將「動態連動」至甘特圖對應的任務 Pipeline 註釋</p>
+          </div>
+          <button class="btn" onclick="addNewSAMRRecord()">＋ 新增會議紀錄</button>
+        </div>
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 140px;">連動任務 Pipeline</th>
+                <th style="width: 140px;">開會跨部門對口</th>
+                <th>會議共識 (Summary)</th>
+                <th>行動指針 (Action Item)</th>
+                <th>可衡量結果 (Measurable Result)</th>
+                <th style="width: 60px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="samrTableBody"></tbody>
+          </table>
         </div>
       </div>
 
@@ -392,19 +404,12 @@
     const WEEKS_COUNT = 8;
     const CELL_WIDTH = 95;
 
-    // 8 種 Jira 經典配色
     const JIRA_COLORS = [
-      "#0052cc", // 海洋藍
-      "#36b37e", // 松石綠
-      "#6554c0", // 經典紫
-      "#ff8b00", // 警示橘
-      "#172b4d", // 石墨黑
-      "#e5493a", // 胭脂紅
-      "#00a3bf", // 活力青
-      "#403294"  // 暗夜藍
+      "#0052cc", "#36b37e", "#6554c0", "#ff8b00",
+      "#172b4d", "#e5493a", "#00a3bf", "#403294"
     ];
 
-    // 核心資料庫 (包含主責任單位、次責任單位、色彩與百分比)
+    // 1. 任務核心資料
     let tasks = [
       { id: 1, name: "策略發想與客戶提案", primary: "策略策劃組", secondary: "專案經理", type: "ops", color: "#0052cc", start: 0, duration: 1.8, progress: 100 },
       { id: 2, name: "主視覺 KV 與宣傳影音定案", primary: "視覺設計組", secondary: "外部動態導演", type: "ops", color: "#00a3bf", start: 1.5, duration: 2.2, progress: 85 },
@@ -416,18 +421,43 @@
       { id: 8, name: "里程碑請款與行政核銷流轉", primary: "財務行政組", secondary: "專案經理", type: "biz", color: "#36b37e", start: 4.5, duration: 2.5, progress: 25 }
     ];
 
-    // 預算明細
-    let budgetItems = [
-      { id: 1, item: "展場結構與主舞台搭設", primary: "硬體工程統包", secondary: "現場督導組", budget: 1200000, cost: 780000, stage: "第二期 (50%)" },
-      { id: 2, item: "記者會公關與媒體採訪維護", primary: "活動公關組", secondary: "專案經理", budget: 450000, cost: 260000, stage: "第一期 (30%)" },
-      { id: 3, item: "全場視覺與 3D 動態影音", primary: "視覺設計組", secondary: "影音團隊", budget: 350000, cost: 210000, stage: "第一期 (30%)" }
+    // 2. 跨部門開會 SAMR 資料庫 (與 taskId 關聯)
+    let samrRecords = [
+      {
+        id: 1,
+        taskId: 2,
+        departments: "視覺設計 × 影音動畫 × 專案組",
+        summary: "客戶要求主視覺 3D 動態光影效果加強，但動畫算圖時間可能超標。",
+        action: "影音組於 48 小時內提供 A/B 兩版精簡燈光方案進行盲測確版。",
+        result: "算圖時間縮短 30%，週三 18:00 前取得客戶簽署確版單。"
+      },
+      {
+        id: 2,
+        taskId: 3,
+        departments: "硬體統包 × 消防法規組 × 現場 PM",
+        summary: "會場承重限制調整，舞台大型 LED 屏架構需微調支撐力矩。",
+        action: "結構技師重出抗風計算書，統包工程增設 4 支碳鋼配重座。",
+        result: "通過現場承重安全認證，零工安通報並如期於 D-2 日完工驗收。"
+      },
+      {
+        id: 3,
+        taskId: 7,
+        departments: "採購發包組 × 商務風控 PM",
+        summary: "原報價超出預算 8%，毛利率面臨下修風險。",
+        action: "以巡迴兩場次聯合發包合併議價，爭取 12% 折讓空間。",
+        result: "成本節約 14.5 萬 TWD，專案整體毛利率回升至 34.2%。"
+      }
     ];
 
-    // 落地執行明細
+    // 預算與落地資料
+    let budgetItems = [
+      { id: 1, item: "展場結構與主舞台搭設", primary: "硬體工程統包", secondary: "現場督導組", budget: 1200000, cost: 780000, stage: "第二期 (50%)" },
+      { id: 2, item: "記者會公關與媒體採訪維護", primary: "活動公關組", secondary: "專案經理", budget: 450000, cost: 260000, stage: "第一期 (30%)" }
+    ];
+
     let opsItems = [
       { id: 1, title: "提案與主視覺確立", primary: "策略策劃組", secondary: "視覺設計組", criteria: "客戶完成簡報簽署確認", status: "已完成", progress: 100 },
-      { id: 2, title: "會場硬體動態搭設", primary: "硬體統包組", secondary: "現場督導 PM", criteria: "通過消防與承重安全檢驗", status: "進行中", progress: 65 },
-      { id: 3, title: "記者會流程彩排與執行", primary: "活動公關組", secondary: "控台導播組", criteria: "Run-down 精確至秒完成", status: "進行中", progress: 30 }
+      { id: 2, title: "會場硬體動態搭設", primary: "硬體統包組", secondary: "現場督導 PM", criteria: "通過消防與承重安全檢驗", status: "進行中", progress: 65 }
     ];
 
     let currentActiveColorTaskId = null;
@@ -437,10 +467,11 @@
       renderGantt();
       renderBizTable();
       renderOpsTable();
+      renderSAMRTable();
       updatePIP();
     });
 
-    // 主面板切換
+    // 導航切換
     function switchNav(navKey) {
       document.querySelectorAll(".panel-view").forEach(el => el.classList.remove("active"));
       document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
@@ -448,7 +479,8 @@
       const titles = {
         roadmap: "專案時程總覽 (Roadmap 甘特圖)",
         ops: "🎯 65% 專案現場與落地執行控管",
-        biz: "💰 35% 專案商務行政與利潤把關"
+        biz: "💰 35% 專案商務行政與利潤把關",
+        samr: "🗣️ 跨部門溝通決策台 (Summary - Action - Measurable Result)"
       };
 
       document.getElementById(`view-${navKey}`).classList.add("active");
@@ -456,17 +488,15 @@
       event.currentTarget.classList.add("active");
     }
 
-    // 子頁籤切換 (Sub Tab)
     function switchSubTab(parentKey, tabKey) {
       const parent = document.getElementById(`view-${parentKey}`);
       parent.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       parent.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
-
       event.currentTarget.classList.add("active");
       document.getElementById(`${parentKey}-sub-${tabKey}`).classList.add("active");
     }
 
-    // 色彩選擇盤初始化 (8 色)
+    // 8 色調色盤
     function initPalettePopover() {
       const pop = document.getElementById("palettePopover");
       pop.innerHTML = "";
@@ -506,21 +536,19 @@
       pop.style.display = "grid";
     }
 
-    // PIP 計算 (以 65% 落地 + 35% 商務進行加權)
+    // 更新 PIP
     function updatePIP() {
       const opsTasks = tasks.filter(t => t.type === 'ops');
       const bizTasks = tasks.filter(t => t.type === 'biz');
-
       const avgOps = opsTasks.reduce((acc, c) => acc + c.progress, 0) / (opsTasks.length || 1);
       const avgBiz = bizTasks.reduce((acc, c) => acc + c.progress, 0) / (bizTasks.length || 1);
-
       const weighted = Math.round((avgOps * 0.65) + (avgBiz * 0.35));
 
       document.getElementById("pipValue").textContent = `${weighted}%`;
       document.getElementById("pipSub").textContent = `65% 落地: ${Math.round(avgOps)}% | 35% 商務: ${Math.round(avgBiz)}%`;
     }
 
-    // 渲染甘特圖
+    // 渲染甘特圖（整合 SAMR 註釋標籤）
     function renderGantt() {
       const treeContainer = document.getElementById("treeRows");
       const timelineHeader = document.getElementById("timelineHeader");
@@ -538,7 +566,13 @@
       }
 
       tasks.forEach(task => {
-        // 左側任務列
+        // 尋找此任務是否有關聯的開會決策 SAMR
+        const samr = samrRecords.find(s => s.taskId === task.id);
+        const samrBadge = samr 
+          ? `<span class="samr-annotation" title="【會議摘要】${samr.summary}\n【行動】${samr.action}\n【可衡量結果】${samr.result}">📌 SAMR 決策</span>` 
+          : '';
+
+        // 左側任務樹
         const treeRow = document.createElement("div");
         treeRow.className = "tree-row";
         treeRow.innerHTML = `
@@ -546,12 +580,13 @@
             <span class="color-dot" style="background: ${task.color};" onclick="openColorPicker(event, ${task.id})" title="點擊切換顏色"></span>
             <span ondblclick="editTaskName(${task.id})" title="雙擊改名" style="cursor:pointer; font-weight:600;">${task.name}</span>
             <span style="font-size:10px; color:#6b778c;">[主: ${task.primary} | 次: ${task.secondary}]</span>
+            ${samrBadge}
           </div>
           <span style="color:#de350b; cursor:pointer; font-size:11px;" onclick="deleteTask(${task.id})">✕</span>
         `;
         treeContainer.appendChild(treeRow);
 
-        // 右側時間軸列
+        // 右側時間矩陣
         const row = document.createElement("div");
         row.className = "timeline-row";
         for (let i = 0; i < WEEKS_COUNT; i++) {
@@ -560,23 +595,27 @@
           row.appendChild(grid);
         }
 
-        // 甘特條
+        // 甘特長條
         const bar = document.createElement("div");
         bar.className = "gantt-bar";
         bar.style.backgroundColor = task.color;
         bar.style.left = `${task.start * CELL_WIDTH}px`;
         bar.style.width = `${task.duration * CELL_WIDTH}px`;
+        
+        const barAnnotation = samr ? ` • 📌 [結果: ${samr.result.substring(0, 10)}...]` : '';
         bar.innerHTML = `
           <span>${task.name} (${Math.round(task.progress)}%)</span>
-          <span style="font-size:9px; opacity:0.85; margin-left:6px;">[主責: ${task.primary} / 次責: ${task.secondary}]</span>
+          <span style="font-size:9px; opacity:0.85; margin-left:4px;">[${task.primary}]${barAnnotation}</span>
         `;
 
-        // 縮放把手
+        if (samr) {
+          bar.setAttribute("title", `會議共識：${samr.summary}\n行動指針：${samr.action}\n量化成果：${samr.result}`);
+        }
+
         const resizer = document.createElement("div");
         resizer.className = "resizer";
         bar.appendChild(resizer);
 
-        // 拖曳平移與工期伸縮連動百分比
         bindGanttInteractions(bar, resizer, task);
 
         row.appendChild(bar);
@@ -586,9 +625,8 @@
       updatePIP();
     }
 
-    // 綁定甘特圖互動（平移與伸縮時進度 % 即時連動）
     function bindGanttInteractions(bar, resizer, task) {
-      // 1. 平移
+      // 平移
       bar.addEventListener("mousedown", (e) => {
         if (e.target === resizer) return;
         e.preventDefault();
@@ -599,10 +637,8 @@
           const deltaWeeks = (evt.clientX - startX) / CELL_WIDTH;
           task.start = Math.max(0, originStart + deltaWeeks);
           bar.style.left = `${task.start * CELL_WIDTH}px`;
-          
-          // 平移連動微調進度（模擬時程推進）
           task.progress = Math.min(100, Math.max(0, Math.round((task.start / (WEEKS_COUNT - task.duration)) * 100)));
-          bar.querySelector("span").textContent = `${task.name} (${task.progress}%)`;
+          renderGanttBarContent(bar, task);
           updatePIP();
         }
 
@@ -614,7 +650,7 @@
         window.addEventListener("mouseup", onUp);
       });
 
-      // 2. 伸縮工期 (Duration Resize)
+      // 伸縮工期
       resizer.addEventListener("mousedown", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -625,10 +661,8 @@
           const deltaWeeks = (evt.clientX - startX) / CELL_WIDTH;
           task.duration = Math.max(0.5, originDuration + deltaWeeks);
           bar.style.width = `${task.duration * CELL_WIDTH}px`;
-
-          // 工期伸縮動態計算進度百分比 (以工期分配比例推算)
           task.progress = Math.min(100, Math.max(5, Math.round((task.duration / 3) * 100)));
-          bar.querySelector("span").textContent = `${task.name} (${task.progress}%)`;
+          renderGanttBarContent(bar, task);
           updatePIP();
         }
 
@@ -641,11 +675,75 @@
       });
     }
 
-    // 渲染 35% 商務表格
+    function renderGanttBarContent(bar, task) {
+      const samr = samrRecords.find(s => s.taskId === task.id);
+      const barAnnotation = samr ? ` • 📌 [結果: ${samr.result.substring(0, 10)}...]` : '';
+      bar.querySelector("span").textContent = `${task.name} (${task.progress}%)`;
+    }
+
+    // 渲染 跨部門開會 SAMR 面板
+    function renderSAMRTable() {
+      const tbody = document.getElementById("samrTableBody");
+      tbody.innerHTML = "";
+
+      samrRecords.forEach(record => {
+        const tr = document.createElement("tr");
+
+        // 任務選項下拉單
+        let optionsHtml = `<option value="">-- 未綁定 --</option>`;
+        tasks.forEach(t => {
+          optionsHtml += `<option value="${t.id}" ${t.id === record.taskId ? 'selected' : ''}>${t.name}</option>`;
+        });
+
+        tr.innerHTML = `
+          <td>
+            <select onchange="updateSAMRField(${record.id}, 'taskId', Number(this.value))">
+              ${optionsHtml}
+            </select>
+          </td>
+          <td><input type="text" value="${record.departments}" onchange="updateSAMRField(${record.id}, 'departments', this.value)"></td>
+          <td><textarea onchange="updateSAMRField(${record.id}, 'summary', this.value)">${record.summary}</textarea></td>
+          <td><textarea onchange="updateSAMRField(${record.id}, 'action', this.value)">${record.action}</textarea></td>
+          <td><textarea onchange="updateSAMRField(${record.id}, 'result', this.value)">${record.result}</textarea></td>
+          <td><button class="btn" style="background:#dfe1e6; color:#172b4d; padding:3px 6px; font-size:11px;" onclick="deleteSAMRRecord(${record.id})">刪除</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateSAMRField(id, field, value) {
+      const rec = samrRecords.find(r => r.id === id);
+      if (rec) {
+        rec[field] = value;
+        // 即時刷新甘特圖上的連動註釋
+        renderGantt();
+      }
+    }
+
+    function addNewSAMRRecord() {
+      const newRec = {
+        id: Date.now(),
+        taskId: tasks.length > 0 ? tasks[0].id : null,
+        departments: "跨部門對口",
+        summary: "填寫開會核心共識 (Summary)...",
+        action: "填寫指派負責人與具體行動 (Action Item)...",
+        result: "設定時間截止與量化產出 (Measurable Result)..."
+      };
+      samrRecords.push(newRec);
+      renderSAMRTable();
+      renderGantt();
+    }
+
+    function deleteSAMRRecord(id) {
+      samrRecords = samrRecords.filter(r => r.id !== id);
+      renderSAMRTable();
+      renderGantt();
+    }
+
+    // 渲染商務與落地表格
     function renderBizTable() {
       const tbody = document.getElementById("bizTableBody");
       tbody.innerHTML = "";
-
       budgetItems.forEach(b => {
         const profit = b.budget - b.cost;
         const margin = b.budget > 0 ? ((profit / b.budget) * 100).toFixed(1) : 0;
@@ -656,7 +754,7 @@
           <td><input type="text" value="${b.secondary}" onchange="b.secondary=this.value"></td>
           <td><input type="number" value="${b.budget}" onchange="b.budget=Number(this.value); renderBizTable();"></td>
           <td><input type="number" value="${b.cost}" onchange="b.cost=Number(this.value); renderBizTable();"></td>
-          <td style="font-weight:700; color:${margin >= 32 ? '#006644':'#ff8b00'};">${margin}% (${profit.toLocaleString()} TWD)</td>
+          <td style="font-weight:700; color:${margin >= 32 ? '#006644':'#ff8b00'};">${margin}%</td>
           <td>
             <select onchange="b.stage=this.value">
               <option ${b.stage.includes('第一期')?'selected':''}>第一期款 (30%)</option>
@@ -670,11 +768,9 @@
       });
     }
 
-    // 渲染 65% 落地表格
     function renderOpsTable() {
       const tbody = document.getElementById("opsTableBody");
       tbody.innerHTML = "";
-
       opsItems.forEach(op => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -696,13 +792,13 @@
       });
     }
 
-    // 通用輔助函式
     function editTaskName(id) {
       const t = tasks.find(x => x.id === id);
       const name = prompt("修改任務名稱：", t.name);
       if (name) {
         t.name = name;
         renderGantt();
+        renderSAMRTable();
       }
     }
 
@@ -710,18 +806,12 @@
       if (confirm("確定刪除此甘特圖任務？")) {
         tasks = tasks.filter(x => x.id !== id);
         renderGantt();
+        renderSAMRTable();
       }
     }
 
-    function deleteBizItem(id) {
-      budgetItems = budgetItems.filter(x => x.id !== id);
-      renderBizTable();
-    }
-
-    function deleteOpsItem(id) {
-      opsItems = opsItems.filter(x => x.id !== id);
-      renderOpsTable();
-    }
+    function deleteBizItem(id) { budgetItems = budgetItems.filter(x => x.id !== id); renderBizTable(); }
+    function deleteOpsItem(id) { opsItems = opsItems.filter(x => x.id !== id); renderOpsTable(); }
 
     function openAddTaskModal() {
       const name = prompt("任務名稱：", "新里程碑任務");
@@ -742,6 +832,7 @@
         progress: 0
       });
       renderGantt();
+      renderSAMRTable();
     }
   </script>
 </body>
