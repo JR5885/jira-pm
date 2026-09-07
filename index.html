@@ -3,17 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Project Hub - Jira Style Gantt</title>
+  <title>可編輯 PM 甘特圖 (Jira Style)</title>
   <style>
     :root {
       --jira-blue: #0052cc;
       --jira-dark: #172b4d;
       --jira-bg: #f4f5f7;
       --jira-border: #dfe1e6;
-      --jira-bar-blue: #4c9aff;
-      --jira-bar-green: #36b37e;
-      --jira-bar-orange: #ffab00;
-      --text-muted: #6b778c;
+      --jira-row-hover: #ebecf0;
+      --cell-width: 90px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif; }
@@ -21,156 +19,271 @@
 
     /* Sidebar */
     .sidebar { width: 220px; background: #0747a6; color: #fff; display: flex; flex-direction: column; padding: 20px 16px; flex-shrink: 0; }
-    .sidebar h2 { font-size: 16px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
-    .nav-item { padding: 10px 12px; border-radius: 4px; font-size: 14px; cursor: pointer; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
-    .nav-item.active, .nav-item:hover { background: rgba(255,255,255,0.15); }
+    .sidebar h2 { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+    .nav-item { padding: 8px 12px; border-radius: 4px; font-size: 13px; margin-bottom: 4px; cursor: default; }
+    .nav-item.active { background: rgba(255,255,255,0.2); font-weight: 600; }
 
-    /* Main Container */
+    /* Main Area */
     .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-
-    /* Header */
-    .header { padding: 16px 24px; border-bottom: 1px solid var(--jira-border); display: flex; justify-content: space-between; align-items: center; }
-    .header-title h1 { font-size: 20px; font-weight: 600; }
-    .header-title p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
-    .stats-badge { display: flex; gap: 12px; }
-    .badge { padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; }
-    .badge-core { background: #deebff; color: #0747a6; }
-    .badge-biz { background: #e3fcef; color: #006644; }
+    .header { padding: 14px 24px; border-bottom: 1px solid var(--jira-border); display: flex; justify-content: space-between; align-items: center; }
+    .header-info h1 { font-size: 18px; font-weight: 600; }
+    .header-info p { font-size: 12px; color: #6b778c; margin-top: 2px; }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .btn { background: var(--jira-blue); color: #fff; border: none; padding: 7px 14px; border-radius: 4px; font-size: 13px; cursor: pointer; font-weight: 500; }
+    .btn:hover { background: #0065ff; }
 
     /* Gantt Workspace */
-    .gantt-wrapper { flex: 1; display: flex; overflow: auto; position: relative; }
+    .gantt-container { flex: 1; display: flex; overflow: auto; position: relative; }
 
-    /* Task Tree Column */
-    .task-tree { width: 340px; border-right: 1px solid var(--jira-border); background: #fafbfc; flex-shrink: 0; }
-    .tree-header { height: 45px; border-bottom: 1px solid var(--jira-border); padding: 0 16px; display: flex; align-items: center; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-    .tree-node { height: 42px; border-bottom: 1px solid #ebecf0; padding: 0 16px; display: flex; align-items: center; font-size: 13px; gap: 8px; white-space: nowrap; }
-    .tree-node.epic { font-weight: 700; background: #f4f5f7; }
-    .tree-node.sub { padding-left: 32px; color: #344563; }
-    .tag { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
-    .tag-ops { background: #deebff; color: #0052cc; }
-    .tag-biz { background: #eae6ff; color: #403294; }
+    /* Task Tree */
+    .task-tree { width: 340px; border-right: 2px solid var(--jira-border); background: #fafbfc; flex-shrink: 0; }
+    .tree-header { height: 44px; border-bottom: 1px solid var(--jira-border); padding: 0 16px; display: flex; align-items: center; font-size: 12px; font-weight: 700; color: #6b778c; }
+    .tree-row { height: 42px; border-bottom: 1px solid #ebecf0; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+    .tree-row:hover { background: var(--jira-row-hover); }
+    .task-title { display: flex; align-items: center; gap: 6px; cursor: text; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+    .badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: 600; flex-shrink: 0; }
+    .badge-ops { background: #deebff; color: #0747a6; }
+    .badge-biz { background: #eae6ff; color: #403294; }
+    .delete-btn { color: #de350b; cursor: pointer; opacity: 0; font-size: 14px; }
+    .tree-row:hover .delete-btn { opacity: 1; }
 
-    /* Timeline Area */
-    .timeline-view { flex: 1; display: flex; flex-direction: column; overflow-x: auto; min-width: 600px; }
-    .timeline-header { height: 45px; border-bottom: 1px solid var(--jira-border); display: flex; background: #fafbfc; }
-    .timeline-cell { flex: 1; min-width: 90px; border-right: 1px dashed var(--jira-border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--text-muted); }
-    .timeline-body { position: relative; }
+    /* Timeline Matrix */
+    .timeline { flex: 1; display: flex; flex-direction: column; min-width: 720px; user-select: none; }
+    .timeline-header { height: 44px; border-bottom: 1px solid var(--jira-border); display: flex; background: #fafbfc; }
+    .time-col { width: var(--cell-width); border-right: 1px dashed var(--jira-border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #6b778c; flex-shrink: 0; }
+    
+    .timeline-body { position: relative; flex: 1; }
     .timeline-row { height: 42px; border-bottom: 1px solid #ebecf0; position: relative; display: flex; }
-    .grid-column { flex: 1; min-width: 90px; border-right: 1px dashed #f4f5f7; height: 100%; }
+    .grid-col { width: var(--cell-width); border-right: 1px dashed #f4f5f7; height: 100%; flex-shrink: 0; }
 
-    /* Gantt Bars */
-    .gantt-bar { position: absolute; height: 22px; top: 10px; border-radius: 4px; font-size: 11px; color: #fff; display: flex; align-items: center; padding: 0 8px; font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.1s; }
-    .gantt-bar:hover { transform: translateY(-1px); filter: brightness(0.95); }
-    .bar-strategy { background-color: var(--jira-bar-blue); }
+    /* Interactive Gantt Bar */
+    .gantt-bar {
+      position: absolute;
+      top: 9px;
+      height: 24px;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      cursor: grab;
+      z-index: 10;
+    }
+    .gantt-bar:active { cursor: grabbing; }
+    .bar-ops { background-color: #4c9aff; }
     .bar-biz { background-color: #6554c0; }
-    .bar-milestone { background-color: var(--jira-bar-orange); }
+    
+    /* Resize Handle */
+    .resizer {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 6px;
+      height: 100%;
+      cursor: col-resize;
+      background: rgba(0,0,0,0.15);
+      border-top-right-radius: 4px;
+      border-bottom-right-radius: 4px;
+    }
+    .resizer:hover { background: rgba(0,0,0,0.3); }
   </style>
 </head>
 <body>
 
-  <!-- Sidebar -->
   <aside class="sidebar">
     <h2>⚡ PM Command</h2>
-    <div class="nav-item active">📊 Roadmap (甘特圖)</div>
-    <div class="nav-item">📋 專案看板 (Board)</div>
-    <div class="nav-item">💰 利潤與成本審查</div>
-    <div class="nav-item">📑 合約與請款追蹤</div>
+    <div class="nav-item active">📊 Roadmap (互動甘特圖)</div>
+    <div class="nav-item">💰 預算/利潤管控 (35%)</div>
+    <div class="nav-item">🎯 落地時程審查 (65%)</div>
   </aside>
 
-  <!-- Main Content -->
   <div class="main">
-    <!-- Header -->
     <header class="header">
-      <div class="header-title">
-        <h1>大型巡迴展演與記者會專案 (Q3 Roadmap)</h1>
-        <p>PM 職務定位：專案落地執行 (65%) + 商務利潤把關 (35%)</p>
+      <div class="header-info">
+        <h1>專案時程與利潤把關看板 (可互動編輯)</h1>
+        <p>提示：條形圖可「按住拖曳」平移，或拖曳「右端小槓桿」增減工期；雙擊任務名稱可直接編輯。</p>
       </div>
-      <div class="stats-badge">
-        <span class="badge badge-core">專案落地進度：65% 配置</span>
-        <span class="badge badge-biz">利潤與合約達成：35% 配置</span>
+      <div class="header-actions">
+        <button class="btn" onclick="addNewTask()">＋ 新增任務</button>
       </div>
     </header>
 
-    <!-- Gantt Chart Container -->
-    <div class="gantt-wrapper">
-      
-      <!-- Left: Task Hierarchy -->
+    <div class="gantt-container">
+      <!-- 任務階層欄位 -->
       <div class="task-tree">
-        <div class="tree-header">任務名稱 / 模組</div>
-        
-        <!-- Epic 1 -->
-        <div class="tree-node epic">
-          <span class="tag tag-ops">65%</span>
-          <span>1. 專案統籌與場域落地</span>
-        </div>
-        <div class="tree-node sub">├ 策略規劃與客戶提案審查</div>
-        <div class="tree-node sub">├ 視覺設計與影音製作定案</div>
-        <div class="tree-node sub">├ 硬體統包進場與現場督導</div>
-        <div class="tree-node sub">└ 記者會與巡迴活動結案</div>
-
-        <!-- Epic 2 -->
-        <div class="tree-node epic">
-          <span class="tag tag-biz">35%</span>
-          <span>2. 商務行政與利潤管理</span>
-        </div>
-        <div class="tree-node sub">├ 專案總預算編列與毛利鎖定</div>
-        <div class="tree-node sub">├ 公部門／指標客戶合約審查</div>
-        <div class="tree-node sub">├ 供應商議價採購與發包對接</div>
-        <div class="tree-node sub">└ 第一期請款與行政核銷流程</div>
+        <div class="tree-header">任務清單 / 類別 (雙擊改名)</div>
+        <div id="treeRows"></div>
       </div>
 
-      <!-- Right: Timeline Matrix -->
-      <div class="timeline-view">
-        <!-- Weeks Header -->
+      <!-- 時間軸欄位 -->
+      <div class="timeline" id="timelineView">
         <div class="timeline-header">
-          <div class="timeline-cell">Week 1</div>
-          <div class="timeline-cell">Week 2</div>
-          <div class="timeline-cell">Week 3</div>
-          <div class="timeline-cell">Week 4</div>
-          <div class="timeline-cell">Week 5</div>
-          <div class="timeline-cell">Week 6</div>
+          <div class="time-col">Week 1</div>
+          <div class="time-col">Week 2</div>
+          <div class="time-col">Week 3</div>
+          <div class="time-col">Week 4</div>
+          <div class="time-col">Week 5</div>
+          <div class="time-col">Week 6</div>
+          <div class="time-col">Week 7</div>
+          <div class="time-col">Week 8</div>
         </div>
-
-        <!-- Timeline Grid Rows & Bars -->
-        <div class="timeline-body">
-          <!-- Row Epic 1 -->
-          <div class="timeline-row">
-            <div class="gantt-bar bar-strategy" style="left: 10px; width: 440px;">Epic 全時段運作 (W1-W5)</div>
-          </div>
-          <div class="timeline-row">
-            <div class="gantt-bar bar-strategy" style="left: 10px; width: 140px;">企劃提案發想</div>
-          </div>
-          <div class="timeline-row">
-            <div class="gantt-bar bar-strategy" style="left: 120px; width: 170px;">視覺/KV/影音監修</div>
-          </div>
-          <div class="timeline-row">
-            <div class="gantt-bar bar-strategy" style="left: 280px; width: 160px;">硬體統包與會場搭建</div>
-          </div>
-          <div class="timeline-row">
-            <div class="gantt-bar bar-milestone" style="left: 440px; width: 80px;">現場執行 ◆</div>
-          </div>
-
-          <!-- Row Epic 2 -->
-          <div class="timeline-row">
-            <div class="gantt-bar bar-biz" style="left: 10px; width: 520px;">Epic 財務行政全週期 (W1-W6)</div>
-          </div>
-          <div class="timeline-row">
-            <div class="gantt-bar bar-biz" style="left: 10px; width: 110px;">預算/利潤模型</div>
-          </div>
-          <div class="timeline-row">
-            <div class="gantt-bar bar-biz" style="left: 80px; width: 120px;">合約條款風控審查</div>
-          </div>
-          <div class="timeline-row">
-            <div class="gantt-bar bar-biz" style="left: 170px; width: 150px;">廠商發包採購議價</div>
-          </div>
-          <div class="timeline-row">
-            <div class="gantt-bar bar-milestone" style="left: 360px; width: 160px;">Milestone 請款核銷 ◆</div>
-          </div>
-        </div>
+        <div class="timeline-body" id="timelineRows"></div>
       </div>
-
     </div>
   </div>
 
+  <script>
+    const CELL_WIDTH = 90; // 每週像素寬度
+    const TOTAL_WEEKS = 8;
+
+    // 初始資料（65% 落地 + 35% 商務風控）
+    let tasks = [
+      { id: 1, name: "策略發想與客戶提案", type: "ops", start: 0, duration: 1.5 },
+      { id: 2, name: "主視覺 (KV) 與影音製作監修", type: "ops", start: 1.2, duration: 2.3 },
+      { id: 3, name: "硬體統包進場與場域施工", type: "ops", start: 3.2, duration: 1.8 },
+      { id: 4, name: "記者會現場執行與活動落地", type: "ops", start: 4.8, duration: 1.0 },
+      { id: 5, name: "專案預算編列與毛利鎖定", type: "biz", start: 0, duration: 1.2 },
+      { id: 6, name: "公部門/客戶合約條款風控審查", type: "biz", start: 0.8, duration: 1.5 },
+      { id: 7, name: "供應商議價談判與採購發包", type: "biz", start: 1.8, duration: 1.8 },
+      { id: 8, name: "里程碑請款與行政核銷流轉", type: "biz", start: 4.0, duration: 2.2 }
+    ];
+
+    function renderGantt() {
+      const treeContainer = document.getElementById("treeRows");
+      const timelineContainer = document.getElementById("timelineRows");
+      
+      treeContainer.innerHTML = "";
+      timelineContainer.innerHTML = "";
+
+      tasks.forEach((task, index) => {
+        // 1. 渲染左側名稱列表
+        const treeRow = document.createElement("div");
+        treeRow.className = "tree-row";
+        treeRow.innerHTML = `
+          <div class="task-title" ondblclick="editTaskName(${task.id})">
+            <span class="badge ${task.type === 'ops' ? 'badge-ops' : 'badge-biz'}">${task.type === 'ops' ? '65% 落地' : '35% 商務'}</span>
+            <span id="label-${task.id}">${task.name}</span>
+          </div>
+          <span class="delete-btn" onclick="deleteTask(${task.id})" title="刪除任務">✕</span>
+        `;
+        treeContainer.appendChild(treeRow);
+
+        // 2. 渲染右側網格行
+        const row = document.createElement("div");
+        row.className = "timeline-row";
+        for (let i = 0; i < TOTAL_WEEKS; i++) {
+          const col = document.createElement("div");
+          col.className = "grid-col";
+          row.appendChild(col);
+        }
+
+        // 3. 渲染條形圖
+        const bar = document.createElement("div");
+        bar.className = `gantt-bar ${task.type === 'ops' ? 'bar-ops' : 'bar-biz'}`;
+        bar.style.left = `${task.start * CELL_WIDTH}px`;
+        bar.style.width = `${task.duration * CELL_WIDTH}px`;
+        bar.textContent = task.name;
+
+        // 縮放把手
+        const resizer = document.createElement("div");
+        resizer.className = "resizer";
+        bar.appendChild(resizer);
+
+        // 綁定拖曳與縮放事件
+        attachDragAndResize(bar, resizer, task);
+
+        row.appendChild(bar);
+        timelineContainer.appendChild(row);
+      });
+    }
+
+    function attachDragAndResize(bar, resizer, task) {
+      // --- 拖曳移動 ---
+      bar.addEventListener("mousedown", (e) => {
+        if (e.target === resizer) return; // 點擊調整寬度時不觸發平移
+        e.preventDefault();
+        
+        let startX = e.clientX;
+        let originalStart = task.start;
+
+        function onMouseMove(moveEvent) {
+          const deltaWeeks = (moveEvent.clientX - startX) / CELL_WIDTH;
+          task.start = Math.max(0, originalStart + deltaWeeks);
+          bar.style.left = `${task.start * CELL_WIDTH}px`;
+        }
+
+        function onMouseUp() {
+          window.removeEventListener("mousemove", onMouseMove);
+          window.removeEventListener("mouseup", onMouseUp);
+        }
+
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
+      });
+
+      // --- 縮放長度 (工期調整) ---
+      resizer.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        let startX = e.clientX;
+        let originalDuration = task.duration;
+
+        function onMouseMove(moveEvent) {
+          const deltaWeeks = (moveEvent.clientX - startX) / CELL_WIDTH;
+          task.duration = Math.max(0.4, originalDuration + deltaWeeks);
+          bar.style.width = `${task.duration * CELL_WIDTH}px`;
+        }
+
+        function onMouseUp() {
+          window.removeEventListener("mousemove", onMouseMove);
+          window.removeEventListener("mouseup", onMouseUp);
+        }
+
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
+      });
+    }
+
+    // 新增任務
+    function addNewTask() {
+      const name = prompt("請輸入任務名稱：", "新專案任務");
+      if (!name) return;
+      const isBiz = confirm("此任務屬於「35% 商務與利潤行政」嗎？\n[確定] = 35% 商務風控\n[取消] = 65% 專案落地執行");
+      
+      const newTask = {
+        id: Date.now(),
+        name: name,
+        type: isBiz ? "biz" : "ops",
+        start: 0,
+        duration: 2.0
+      };
+      tasks.push(newTask);
+      renderGantt();
+    }
+
+    // 編輯名稱
+    function editTaskName(id) {
+      const task = tasks.find(t => t.id === id);
+      const newName = prompt("編輯任務名稱：", task.name);
+      if (newName && newName.trim() !== "") {
+        task.name = newName.trim();
+        renderGantt();
+      }
+    }
+
+    // 刪除任務
+    function deleteTask(id) {
+      if (confirm("確定要刪除這項任務嗎？")) {
+        tasks = tasks.filter(t => t.id !== id);
+        renderGantt();
+      }
+    }
+
+    // 初次載入渲染
+    renderGantt();
+  </script>
 </body>
 </html>
